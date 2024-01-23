@@ -69,12 +69,10 @@ pub fn img_to_lines(img: &mut DynamicImage) -> Vec<Vec<(i32, i32)>> {
   lines
 }
 
-pub fn line_to_img(line: &[(i32, i32)]) {
-  let mut img = DynamicImage::new_rgb8(200, 200);
+pub fn line_to_img(img: &mut DynamicImage, line: &[(i32, i32)], col: image::Rgba<u8>) {
   for point in line.iter() {
-    img.put_pixel(point.0 as u32, point.1 as u32, image::Rgba([255, 255, 255, 255]));
+    img.put_pixel(point.0 as u32, point.1 as u32, col);
   }
-  img.save("images/line.png").unwrap();
 } // fn line_to_img()
 
 fn random_col() -> image::Rgba<u8> {
@@ -88,9 +86,7 @@ pub fn lines_to_img(lines: &[Vec<(i32, i32)>]) {
   let mut img = DynamicImage::new_rgb8(200, 200);
   for line in lines.iter() {
     let col = random_col();
-    for point in line.iter() {
-      img.put_pixel(point.0 as u32, point.1 as u32, col);
-    }
+    line_to_img(&mut img, line, col);
   }
   img.save("images/lines.png").unwrap();
 } // fn lines_to_img()
