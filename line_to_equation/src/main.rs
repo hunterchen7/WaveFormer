@@ -3,7 +3,7 @@ mod fourier;
 use std::{fs::File, io::Write};
 
 fn main() -> std::io::Result<()> {
-  let mut img = img_to_line::get_image("images/islands2.png");
+  let mut img = img_to_line::get_image("images/eg3.png");
   let lines = img_to_line::img_to_lines(&mut img);
   img_to_line::lines_to_img(&lines);
 
