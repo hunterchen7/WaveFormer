@@ -2,13 +2,12 @@ Converts lines from an image into parametric equations using Fourier transforms,
 
 Currently only supports black line(s).
 
-Usage: pretty rudimentary at the moment, just change "img" input in main.rs to desired image and run it like a normal rust program. generated equations will appear in images/equations.txt
+Usage: pretty rudimentary at the moment, just change "img" input in main.rs to desired image and run it like a normal rust program. generated equations will appear in images/equations.txt. see generated islands in images/lines.png.
 
-left: generated graph from equations on Desmos
-
-middle: input image
-
-right: "islands" generated from DFS
+**Screenshot:**
+- left: generated graph from equations on Desmos
+- middle: input image
+- right: "islands" generated from DFS
 ![image](https://github.com/hunterchen7/LinesToEquation/assets/34012681/3a38b715-a0f3-4f57-a484-491794d58a04)
 
 TODO:
