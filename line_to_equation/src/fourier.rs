@@ -15,9 +15,8 @@ pub fn construct_equation(points: &[(i32,i32)]) -> String {
 
   let len = new_points.len() as f64;
 
-  let (mut cx, mut cy) = (0.0, 0.0);
   for n in 0..(iterations*2 + 1) {
-    (cx, cy) = (0.0, 0.0);
+    let (mut cx, mut cy) = (0.0, 0.0);
     let k = (n - iterations) as f64; // goes from -iterations to iterations
     let pik2 = 2.0 * PI * k;
 

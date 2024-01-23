@@ -1,6 +1,7 @@
 use image::{GenericImageView, DynamicImage, GenericImage};
+use rand::Rng;
 
-fn get_image(path: &str) -> DynamicImage {
+pub fn get_image(path: &str) -> DynamicImage {
   image::open(path).unwrap()
 } // fn get_image()
 
@@ -17,10 +18,8 @@ fn first_black(img: &DynamicImage) -> Option<(i32, i32)> {
   None
 } // fn first_black(
 
-pub fn img_to_line(path: &str) -> Vec<(i32, i32)> {
-  let mut img = get_image(path);
-  
-  let fb = first_black(&img);
+pub fn img_to_line(img: &mut DynamicImage) -> Vec<(i32, i32)> {
+  let fb = first_black(img);
   let mut line = vec![];
 
   let mut curr = match fb { 
@@ -53,14 +52,45 @@ pub fn img_to_line(path: &str) -> Vec<(i32, i32)> {
     }
   }
 
-  // println!("Line: {:?}", line);
   line
 }
 
+pub fn img_to_lines(img: &mut DynamicImage) -> Vec<Vec<(i32, i32)>> {
+  let mut lines = vec![];
+  loop {
+    let line = img_to_line(img);
+    if line.is_empty() {
+      break;
+    }
+    if line.len() > 4 { // ignore arbitarily small lines
+      lines.push(line);
+    }
+  }
+  lines
+}
+
 pub fn line_to_img(line: &[(i32, i32)]) {
-  let mut img = DynamicImage::new_rgb8(500, 500);
+  let mut img = DynamicImage::new_rgb8(200, 200);
   for point in line.iter() {
     img.put_pixel(point.0 as u32, point.1 as u32, image::Rgba([255, 255, 255, 255]));
   }
   img.save("images/line.png").unwrap();
 } // fn line_to_img()
+
+fn random_col() -> image::Rgba<u8> {
+  let col1 = rand::thread_rng().gen_range(100..255);
+  let col2 = rand::thread_rng().gen_range(100..255);
+  let col3 = rand::thread_rng().gen_range(100..255);
+  image::Rgba([col1, col2, col3, 255])
+}
+
+pub fn lines_to_img(lines: &[Vec<(i32, i32)>]) {
+  let mut img = DynamicImage::new_rgb8(200, 200);
+  for line in lines.iter() {
+    let col = random_col();
+    for point in line.iter() {
+      img.put_pixel(point.0 as u32, point.1 as u32, col);
+    }
+  }
+  img.save("images/lines.png").unwrap();
+} // fn lines_to_img()
