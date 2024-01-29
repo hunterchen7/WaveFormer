@@ -14,15 +14,14 @@ fn main() -> std::io::Result<()> {
         let now = Instant::now();
         let mut edges = edge_detection::sobel(&img);
         println!("Sobel: {:?}", now.elapsed());
-        edges.save("images/generated/edges.png").unwrap();
+        edges.save("generated/edges.png").unwrap();
 
         let now = Instant::now();
         let lines = img_to_line::edges_to_lines_w(&mut edges);
         println!("Img to lines: {:?}", now.elapsed());
         img_to_line::lines_to_img(&lines);
 
-        
-        let mut file = File::create("images/generated/equations.txt").unwrap();
+        let mut file = File::create("generated/equations.txt").unwrap();
 
         let now = Instant::now();
         let mut equations = Vec::new();
@@ -31,7 +30,7 @@ fn main() -> std::io::Result<()> {
             let _ = file.write(equation.as_bytes());
             let _ = file.write(b"\n");
             equations.push(equation);
-        // println!("Equation: {}", equation);
+            // println!("Equation: {}", equation);
         }
         println!("Construct equations: {:?}", now.elapsed());
     }).unwrap();

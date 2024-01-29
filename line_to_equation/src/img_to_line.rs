@@ -160,7 +160,7 @@ pub fn lines_to_img(lines: &[Vec<(i32, i32)>]) {
     let col = random_col();
     line_to_img(&mut img, line, col);
   }
-  img.save("images/generated/lines.png").unwrap();
+  img.save("generated/lines.png").unwrap();
 } // fn lines_to_img()
 
 #[cfg(test)]
