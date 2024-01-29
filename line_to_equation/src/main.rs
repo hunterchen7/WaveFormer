@@ -5,7 +5,7 @@ use std::{fs::File, io::Write};
 use std::time::Instant;
 
 fn main() -> std::io::Result<()> {
-    let img = img_to_line::get_image("images/Valve_original.png");
+    let img = img_to_line::get_image("images/islands1.png");
 
     let now = Instant::now();
     let mut edges = edge_detection::sobel(&img);
@@ -18,7 +18,7 @@ fn main() -> std::io::Result<()> {
     img_to_line::lines_to_img(&lines);
 
     
-    let mut file = File::create("images/equations.txt").unwrap();
+    let mut file = File::create("images/generated/equations.txt").unwrap();
 
     let mut equations = Vec::new();
     for line in lines.iter() {
