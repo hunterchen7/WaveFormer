@@ -1,5 +1,6 @@
 use image::{DynamicImage, GenericImageView, GenericImage};
 
+#[allow(dead_code)]
 pub fn sobel(img: &DynamicImage) -> DynamicImage {
   let mut new_img = img.clone();
   let kernel_x = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
