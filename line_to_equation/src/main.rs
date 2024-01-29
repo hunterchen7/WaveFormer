@@ -17,7 +17,7 @@ fn main() -> std::io::Result<()> {
         edges.save("images/generated/edges.png").unwrap();
 
         let now = Instant::now();
-        let lines = img_to_line::edges_to_lines_b(&mut edges);
+        let lines = img_to_line::edges_to_lines_w(&mut edges);
         println!("Img to lines: {:?}", now.elapsed());
         img_to_line::lines_to_img(&lines);
 
