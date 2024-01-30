@@ -61,7 +61,8 @@ fn dfs(x: i32, y: i32, visited: &mut [bool], img: &DynamicImage, path: &mut Vec<
     return;
   }
   // TODO: add path of (x, y) -> path[-1] to path, otherwise there are disconnected lines which means weird equations
-  path.push((x, y)); // add to path
+  path.push((x, y));
+  // path.push((x, y)); // add to path
   visited[(y * img.width() as i32 + x) as usize] = true; // set visited
   for (i, j) in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)] { // loop through surrounding 3x3
     dfs(x + i, y + j, visited, img, path, col);
@@ -108,7 +109,7 @@ pub fn edges_to_lines(img: &mut DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<(
         // from the end of the path, then it can be partially truncated
         remove_start_palindrome(&mut path);
         remove_end_palindrome(&mut path);        
-        if path.len() > 32 {
+        if path.len() > 16 {
           lines.push(path);
         }
       }
