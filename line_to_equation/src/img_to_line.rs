@@ -56,14 +56,11 @@ fn oob(x: i32, y: i32, img: &DynamicImage) -> bool {
 }
 
 fn dfs(x: i32, y: i32, visited: &mut [bool], img: &DynamicImage, path: &mut Vec<(i32, i32)>, col: image::Rgba<u8>) {
-  if oob(x, y, img) || img.get_pixel(x as u32, y as u32) != col { 
+  if oob(x, y, img) || img.get_pixel(x as u32, y as u32) != col || visited[(y * img.width() as i32 + x) as usize] {
     // if out of bounds or already visited or not white
     return;
   }
-  if visited[(y * img.width() as i32 + x) as usize] {
-    path.push((x, y));
-    return;
-  }
+  // TODO: add path of (x, y) -> path[-1] to path, otherwise there are disconnected lines which means weird equations
   path.push((x, y)); // add to path
   visited[(y * img.width() as i32 + x) as usize] = true; // set visited
   for (i, j) in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)] { // loop through surrounding 3x3
