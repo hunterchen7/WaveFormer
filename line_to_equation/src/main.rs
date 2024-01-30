@@ -20,6 +20,7 @@ fn main() -> std::io::Result<()> {
         let mut lines = img_to_line::edges_to_lines_w(&mut edges);
         lines.sort_by(|a, b| b.len().cmp(&a.len())); // sort by length
         lines.truncate(32); // only take n longest lines
+        println!("Edges to lines: {:?}", now.elapsed());
 
         let mut file = File::create("generated/equations.txt").unwrap();
 
