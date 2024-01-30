@@ -4,8 +4,8 @@ Usage: pretty rudimentary at the moment, just change "img" input in main.rs to d
 
 Basic premise of how it works:
 - Step 1: Convert image into edges using an edge detection algorithm currently just uses a basic Sobel filter, will likely implement a Canny edge detector or something similar in the future.
-- Step 2: Get lines from images using a DFS that keeps track of the path and explores all 8 neighbouring pixels.
-- Step 3: Construct equations of all the lines using Fourier transformations
+- Step 2: Get lines from images using a DFS that keeps track of the path and explores all 8 neighbouring pixels. 
+- Step 3: Construct equations of all the lines using Fourier transformations, omitting lines containing < n points. (currently n = 16)
 
 Example usage:
 
