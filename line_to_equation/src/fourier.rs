@@ -5,7 +5,7 @@ pub fn construct_equation(points: &[(i32,i32)]) -> String {
   let mut xt = vec![];
   let mut yt = vec![];
 
-  let iterations = std::cmp::min(points.len() / 2, 40);
+  let freqs = std::cmp::min(points.len() / 2, 40);
 
   let mut new_points = points.to_vec();
 
@@ -15,9 +15,9 @@ pub fn construct_equation(points: &[(i32,i32)]) -> String {
 
   let len = new_points.len() as f32;
 
-  for n in 0..(iterations*2 + 1) {
+  for n in 0..(freqs*2 + 1) {
     let (mut cx, mut cy) = (0.0, 0.0);
-    let k = (n as f32) - (iterations as f32); // goes from -iterations to iterations
+    let k = (n as f32) - (freqs as f32); // goes from -freqs to freqs
     let pik2 = 2.0 * PI * k;
 
     for (i, p) in new_points.iter().enumerate() {
