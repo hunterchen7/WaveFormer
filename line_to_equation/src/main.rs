@@ -18,7 +18,7 @@ fn main() -> std::io::Result<()> {
 
         let now = Instant::now();
         let mut lines = img_to_line::edges_to_lines_w(&mut edges);
-        lines.sort_by(|a, b| b.len().cmp(&a.len())); // sort by length
+        lines.sort_by_key(|b| std::cmp::Reverse(b.len())); // sort by length
         lines.truncate(32); // only take n longest lines
         println!("Edges to lines: {:?}", now.elapsed());
 
