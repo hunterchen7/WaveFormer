@@ -1,7 +1,7 @@
 use image::{DynamicImage, GenericImageView, GenericImage};
 
 #[allow(dead_code)]
-pub fn sobel(img: &DynamicImage) -> DynamicImage {
+pub fn sobel_threshold(img: &DynamicImage, threshold: u8, use_g: bool) -> DynamicImage {
   let mut new_img = img.clone();
   let kernel_x = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
   let kernel_y = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];  
@@ -23,15 +23,28 @@ pub fn sobel(img: &DynamicImage) -> DynamicImage {
       }
 
       let g = ((gx.pow(2) + gy.pow(2)) as f32).sqrt() as u8;
-      /*if g > 128 && x > 0 && y > 0 { // threshold for white
-        new_img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
+      if g >= threshold && x > 0 && y > 0 { // threshold for white
+        if use_g {
+          new_img.put_pixel(x, y, image::Rgba([g, g, g, 255]));
+        } else {
+          new_img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
+        }
       } else {
         new_img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]));
-      }*/
-        new_img.put_pixel(x, y, image::Rgba([g, g, g, 255]));
+      }
     }
   }
   new_img
+}
+
+#[allow(dead_code)]
+pub fn sobel(img: &DynamicImage) -> DynamicImage {
+  sobel_threshold(img, 0, false)
+}
+
+#[allow(dead_code)]
+pub fn sobel_default(img: &DynamicImage) -> DynamicImage {
+  sobel_threshold(img, 128, true)
 }
 
 const GAUSSIAN_KERNEL_5X5: [[f32; 5]; 5] = [
