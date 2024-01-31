@@ -40,12 +40,12 @@ pub fn sobel_threshold(img: &DynamicImage, threshold: u8, use_g: bool) -> Dynami
 
 #[allow(dead_code)]
 pub fn sobel(img: &DynamicImage) -> DynamicImage {
-  sobel_threshold(img, 0, false)
+  sobel_threshold(img, 0, true)
 }
 
 #[allow(dead_code)]
 pub fn sobel_default(img: &DynamicImage) -> DynamicImage {
-  sobel_threshold(img, 128, true)
+  sobel_threshold(img, 128, false)
 }
 
 pub fn gaussian_blur(img: &DynamicImage, kernel: &[f64]) -> DynamicImage {
