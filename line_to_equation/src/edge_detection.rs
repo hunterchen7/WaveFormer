@@ -84,36 +84,36 @@ pub fn gaussian_blur(img: &DynamicImage, kernel: &[f64]) -> DynamicImage {
 // [accessed 31 Jan, 2024]
 #[allow(dead_code)]
 pub fn gaussian_blur_5x5(img: &DynamicImage) -> DynamicImage {
-  let kernel = [
-    1.0, 4.0, 7.0, 4.0, 1.0,
-    4.0, 16.0, 26.0, 16.0, 4.0,
-    7.0, 26.0, 41.0, 26.0, 7.0,
-    4.0, 16.0, 26.0, 16.0, 4.0,
-    1.0, 4.0, 7.0, 4.0, 1.0
-  ].iter().map(|x| x / 273.0).collect::<Vec<f64>>();
-  gaussian_blur(img, &kernel)
+  gaussian_blur(img, &[
+      1.0, 4.0, 7.0, 4.0, 1.0,
+      4.0, 16.0, 26.0, 16.0, 4.0,
+      7.0, 26.0, 41.0, 26.0, 7.0,
+      4.0, 16.0, 26.0, 16.0, 4.0,
+      1.0, 4.0, 7.0, 4.0, 1.0
+    ].iter().map(|x| x / 273.0).collect::<Vec<f64>>()
+  )
 }
 
 #[allow(dead_code)]
 pub fn gaussian_blur_3x3(img: &DynamicImage) -> DynamicImage {
-  let kernel = [
-    1.0, 2.0, 1.0,
-    2.0, 4.0, 2.0,
-    1.0, 2.0, 1.0
-  ].iter().map(|x| x / 16.0).collect::<Vec<f64>>();
-  gaussian_blur(img, &kernel)
+  gaussian_blur(img, &[
+      1.0, 2.0, 1.0,
+      2.0, 4.0, 2.0,
+      1.0, 2.0, 1.0
+    ].iter().map(|x| x / 16.0).collect::<Vec<f64>>()
+  )
 }
 
 #[allow(dead_code)]
 pub fn gaussian_blur_7x7(img: &DynamicImage) -> DynamicImage {
-  let kernel = [
-    0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0,
-    0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0,
-    1.0, 13.0, 59.0, 97.0, 59.0, 13.0, 1.0,
-    2.0, 22.0, 97.0, 159.0, 97.0, 22.0, 2.0,
-    1.0, 13.0, 59.0, 97.0, 59.0, 13.0, 1.0,
-    0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0,
-    0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0
-  ].iter().map(|x| x / 1003.0).collect::<Vec<f64>>();
-  gaussian_blur(img, &kernel)
+  gaussian_blur(img, &[
+      0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0,
+      0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0,
+      1.0, 13.0, 59.0, 97.0, 59.0, 13.0, 1.0,
+      2.0, 22.0, 97.0, 159.0, 97.0, 22.0, 2.0,
+      1.0, 13.0, 59.0, 97.0, 59.0, 13.0, 1.0,
+      0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0,
+      0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0
+    ].iter().map(|x| x / 1003.0).collect::<Vec<f64>>()
+  )
 }
