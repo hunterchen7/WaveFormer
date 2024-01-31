@@ -56,7 +56,7 @@ const GAUSSIAN_KERNEL_5X5: [[f32; 5]; 5] = [
 ];
 pub fn gaussian_blur_5x5(img: &DynamicImage) -> DynamicImage {
   let mut new_img = img.clone();
-    let kernel = GAUSSIAN_KERNEL_5X5;
+  let kernel = GAUSSIAN_KERNEL_5X5;
 
   for x in 0..img.width() {
     for y in 0..img.height() {
