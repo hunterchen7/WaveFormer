@@ -6,6 +6,10 @@ Basic premise of how it works:
 - Step 1: Convert image into edges using an edge detection algorithm currently just uses a basic Sobel filter, will likely implement a Canny edge detector or something similar in the future.
 - Step 2: Get lines from images using a DFS that keeps track of the path and explores all 8 neighbouring pixels. 
 - Step 3: Construct equations of all the lines using Fourier transformations, omitting lines containing < n points. (currently n = 16)
+  - Computes as follows:
+    1) coefficients $cx_k = \sum_{i=0}^{N-1} \cos (\frac{2\pi k i}{N}) p_{x,i} + \sin(\frac{2\pi k i}{N}) p_{y,i}$ and $cy_k = \sum_{i=0}^{N-1} \cos(\frac{2\pi k i}{N}) p_{y,i} - \sin(\frac{2\pi k i}{N}) p_{x,i}$
+
+    2) then we have $x(t) = \sum_{k=-\text{freqs}}^{\text{freqs}} \frac{cx_k}{N} \cos(k\pi t) - \frac{cy_k}{N} \sin(k\pi t)$ and $y(t) = \sum_{k=-\text{freqs}}^{\text{freqs}} \frac{cx_k}{N} \cos(k\pi t) + \frac{cy_k}{N} \sin(k\pi t)$
 
 Example usage:
 
