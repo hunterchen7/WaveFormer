@@ -1,16 +1,13 @@
 use image::{DynamicImage, GenericImage, GenericImageView};
 use num::integer::Roots;
 
-struct SobelPoint {
-    gx: i32,
-    gy: i32,
-}
+type SobelPoint = (i32, i32);
 
 const SOBEL_X: [[i32; 3]; 3] = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
 
 const SOBEL_Y: [[i32; 3]; 3] = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
 
-pub fn gx_gy_theta(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
+pub fn gx_gy(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
     let mut gx = 0;
     let mut gy = 0;
 
@@ -25,7 +22,15 @@ pub fn gx_gy_theta(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
         }
     }
 
-    SobelPoint { gx, gy }
+    (gx, gy)
+}
+
+pub fn edge_direction((gx, gy): (i32, i32)) -> f64 {
+    (gy as f64).atan2(gx as f64)
+}
+
+pub fn edge_magnitude((gx, gy): (i32, i32)) -> f64 {
+    ((gx.pow(2) + gy.pow(2)) as f64).sqrt()
 }
 
 #[allow(dead_code)]
@@ -34,21 +39,7 @@ pub fn sobel_threshold(img: &DynamicImage, threshold: u8, use_g: bool) -> Dynami
 
     for x in 0..img.width() {
         for y in 0..img.height() {
-            let mut gx = 0;
-            let mut gy = 0;
-
-            for i in 0..3 {
-                for j in 0..3 {
-                    let new_x = ((x as i32 + i - 1).max(0) as u32).min(img.width() - 1);
-                    let new_y = ((y as i32 + j - 1).max(0) as u32).min(img.height() - 1);
-
-                    let pixel = img.get_pixel(new_x, new_y)[0] as i32;
-                    gx += SOBEL_X[i as usize][j as usize] * pixel;
-                    gy += SOBEL_Y[i as usize][j as usize] * pixel;
-                }
-            }
-
-            let g = ((gx.pow(2) + gy.pow(2)) as f64).sqrt() as u8;
+            let g = edge_magnitude(gx_gy(img, x, y)) as u8;
             if g >= threshold && x > 0 && y > 0 {
                 // threshold for white
                 if use_g {
