@@ -1,16 +1,25 @@
 use image::{DynamicImage, GenericImage, GenericImageView};
 use num::integer::Roots;
+use std::cell::RefCell;
 
-struct SobelPoint {
-    gx: i32,
-    gy: i32,
+fn iterate_img<F>(img: &DynamicImage, f: F)
+where
+    F: Fn(u32, u32),
+{
+    for x in 0..img.width() {
+        for y in 0..img.height() {
+            f(x, y);
+        }
+    }
 }
+
+type SobelPoint = (i32, i32);
 
 const SOBEL_X: [[i32; 3]; 3] = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
 
 const SOBEL_Y: [[i32; 3]; 3] = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
 
-pub fn gx_gy_theta(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
+pub fn gx_gy(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
     let mut gx = 0;
     let mut gy = 0;
 
@@ -24,44 +33,37 @@ pub fn gx_gy_theta(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
             gy += SOBEL_Y[i as usize][j as usize] * pixel;
         }
     }
+    (gx, gy)
+}
 
-    SobelPoint { gx, gy }
+pub fn edge_dir(gx: i32, gy: i32) -> f64 {
+    (gy as f64).atan2(gx as f64)
+}
+
+pub fn edge_mag((gx, gy): (i32, i32)) -> f64 {
+    ((gx.pow(2) + gy.pow(2)) as f64).sqrt()
 }
 
 #[allow(dead_code)]
 pub fn sobel_threshold(img: &DynamicImage, threshold: u8, use_g: bool) -> DynamicImage {
-    let mut new_img = img.clone();
+    let new_img = RefCell::new(img.clone());
 
-    for x in 0..img.width() {
-        for y in 0..img.height() {
-            let mut gx = 0;
-            let mut gy = 0;
+    iterate_img(img, |x, y| {
+        let (gx, gy) = gx_gy(img, x, y);
+        let g = edge_mag((gx, gy)) as u8;
 
-            for i in 0..3 {
-                for j in 0..3 {
-                    let new_x = ((x as i32 + i - 1).max(0) as u32).min(img.width() - 1);
-                    let new_y = ((y as i32 + j - 1).max(0) as u32).min(img.height() - 1);
-
-                    let pixel = img.get_pixel(new_x, new_y)[0] as i32;
-                    gx += SOBEL_X[i as usize][j as usize] * pixel;
-                    gy += SOBEL_Y[i as usize][j as usize] * pixel;
-                }
-            }
-
-            let g = ((gx.pow(2) + gy.pow(2)) as f64).sqrt() as u8;
-            if g >= threshold && x > 0 && y > 0 {
-                // threshold for white
-                if use_g {
-                    new_img.put_pixel(x, y, image::Rgba([g, g, g, 255]));
-                } else {
-                    new_img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
-                }
+        if g >= threshold && x > 0 && y > 0 {
+            // threshold for white
+            if use_g {
+                new_img.borrow_mut().put_pixel(x, y, image::Rgba([g, g, g, 255]));
             } else {
-                new_img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]));
+                new_img.borrow_mut().put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
             }
+        } else {
+            new_img.borrow_mut().put_pixel(x, y, image::Rgba([0, 0, 0, 255]));
         }
-    }
-    new_img
+    });
+    new_img.into_inner()
 }
 
 #[allow(dead_code)]
@@ -98,6 +100,7 @@ pub fn apply_kernel<const S: usize>(
     kernel: &[f64; S],
 ) {
     let size = S.sqrt() as i32;
+
     for x in 0..img.width() {
         for y in 0..img.height() {
             let mut r = 0.0;
