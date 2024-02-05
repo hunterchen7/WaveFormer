@@ -85,23 +85,44 @@ enum GaussianFilter {
 }
 
 fn gaussian_blur(img: &DynamicImage, kernel: GaussianFilter) -> DynamicImage {
-    let mut new_img = img.clone();
+    let new_img = RefCell::new(img.clone());
     match kernel {
-        GaussianFilter::K3x3(k) => apply_kernel(img, &mut new_img, &k),
-        GaussianFilter::K5x5(k) => apply_kernel(img, &mut new_img, &k),
-        GaussianFilter::K7x7(k) => apply_kernel(img, &mut new_img, &k),
+        GaussianFilter::K3x3(k) => apply_kernel(img, new_img.borrow_mut(), &k),
+        GaussianFilter::K5x5(k) => apply_kernel(img, new_img, &k),
+        GaussianFilter::K7x7(k) => apply_kernel(img, new_img, &k),
     }
-    new_img
+    new_img.into_inner()
 }
 
 pub fn apply_kernel<const S: usize>(
     img: &DynamicImage,
-    new_img: &mut DynamicImage,
+    new_img: RefCell<DynamicImage>,
     kernel: &[f64; S],
 ) {
     let size = S.sqrt() as i32;
 
-    for x in 0..img.width() {
+    iterate_img(img, |x, y| {
+        let mut r = 0.0;
+        let mut g = 0.0;
+        let mut b = 0.0;
+
+        for i in 0..size {
+            for j in 0..size {
+                let new_x = (x as i32 + i - size / 2).max(0).min(img.width() as i32 - 1) as u32;
+                let new_y = (y as i32 + j - size / 2).max(0).min(img.height() as i32 - 1) as u32;
+
+                let pixel = img.get_pixel(new_x, new_y);
+                let kernel_val = kernel[(i * size + j) as usize];
+
+                r += pixel[0] as f64 * kernel_val;
+                g += pixel[1] as f64 * kernel_val;
+                b += pixel[2] as f64 * kernel_val;
+            }
+        }
+        new_img.borrow_mut().put_pixel(x, y, image::Rgba([r as u8, g as u8, b as u8, 255]));
+    });
+
+    /*for x in 0..img.width() {
         for y in 0..img.height() {
             let mut r = 0.0;
             let mut g = 0.0;
@@ -123,7 +144,24 @@ pub fn apply_kernel<const S: usize>(
 
             new_img.put_pixel(x, y, image::Rgba([r as u8, g as u8, b as u8, 255]));
         }
-    }
+    }*/
+}
+
+
+
+#[allow(dead_code)]
+pub fn gaussian_blur_3x3(img: &DynamicImage) -> DynamicImage {
+    gaussian_blur(img, GaussianFilter::K3x3(GAUSSIAN_3X3))
+}
+
+#[allow(dead_code)]
+pub fn gaussian_blur_5x5(img: &DynamicImage) -> DynamicImage {
+    gaussian_blur(img, GaussianFilter::K5x5(GAUSSIAN_5X5))
+}
+
+#[allow(dead_code)]
+pub fn gaussian_blur_7x7(img: &DynamicImage) -> DynamicImage {
+    gaussian_blur(img, GaussianFilter::K7x7(GAUSSIAN_7X7))
 }
 
 // Gaussian filtering for FPGA based image processing with High-Level Synthesis tools -
@@ -221,66 +259,3 @@ const GAUSSIAN_7X7: [f64; 49] = [
     0.0 / 1003.0,
     0.0 / 1003.0,
 ];
-
-#[allow(dead_code)]
-pub fn gaussian_blur_3x3(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur(img, GaussianFilter::K3x3(GAUSSIAN_3X3))
-}
-
-#[allow(dead_code)]
-pub fn gaussian_blur_5x5(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur(img, GaussianFilter::K5x5(GAUSSIAN_5X5))
-}
-
-#[allow(dead_code)]
-pub fn gaussian_blur_7x7(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur(img, GaussianFilter::K7x7(GAUSSIAN_7X7))
-}
-
-#[allow(dead_code)]
-fn gaussian_blur_old(img: &DynamicImage, kernel: &Vec<f64>) -> DynamicImage {
-    let mut new_img = img.clone();
-    let size = kernel.len().sqrt() as i32;
-    for x in 0..img.width() {
-        for y in 0..img.height() {
-            let mut r = 0.0;
-            let mut g = 0.0;
-            let mut b = 0.0;
-
-            for i in 0..size {
-                for j in 0..size {
-                    let new_x =
-                        ((x as i32 + i - size / 2).max(0).min(img.width() as i32 - 1)) as u32;
-                    let new_y = ((y as i32 + j - size / 2)
-                        .max(0)
-                        .min(img.height() as i32 - 1)) as u32;
-
-                    let pixel = img.get_pixel(new_x, new_y);
-                    let kernel_val = kernel[(i * size + j) as usize];
-
-                    r += pixel[0] as f64 * kernel_val;
-                    g += pixel[1] as f64 * kernel_val;
-                    b += pixel[2] as f64 * kernel_val;
-                }
-            }
-
-            new_img.put_pixel(x, y, image::Rgba([r as u8, g as u8, b as u8, 255]));
-        }
-    }
-    new_img
-}
-
-#[allow(dead_code)]
-pub fn gaussian_blur_7x7_old(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur_old(img, &GAUSSIAN_7X7.to_vec())
-}
-
-#[allow(dead_code)]
-pub fn gaussian_blur_5x5_old(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur_old(img, &GAUSSIAN_5X5.to_vec())
-}
-
-#[allow(dead_code)]
-pub fn gaussian_blur_3x3_old(img: &DynamicImage) -> DynamicImage {
-    gaussian_blur_old(img, &GAUSSIAN_3X3.to_vec())
-}
