@@ -4,8 +4,8 @@ use num::integer::Roots;
 type SobelPoint = (i32, i32);
 
 const SOBEL_X: [[i32; 3]; 3] = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
-
 const SOBEL_Y: [[i32; 3]; 3] = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
+
 
 pub fn gx_gy(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
     let mut gx = 0;
@@ -65,7 +65,48 @@ pub fn sobel_default(img: &DynamicImage) -> DynamicImage {
     sobel_threshold(img, 128, false)
 }
 
-pub fn intensity_gradient() {}
+pub fn intensity_gradient(img: &DynamicImage) -> Vec<Vec<(f64, f64)>> {
+    let mut gradient = vec![vec![(0.0, 0.0); img.height() as usize]; img.width() as usize];
+
+    for x in 0..img.width() {
+        for y in 0..img.height() {
+            let magnitude = edge_magnitude(gx_gy(img, x, y));
+            let direction = edge_direction(gx_gy(img, x, y));
+            gradient[x as usize][y as usize] = (magnitude, direction);
+        }
+    }
+    gradient
+}
+
+// return offset for the pixels in the direction of the angle
+pub fn pixel_dir_offsets(angle: f64) -> ((i32, i32), (i32, i32)) {
+    match angle {
+        _ if (-22.5..22.5).contains(&angle) || (157.5..202.5).contains(&angle) => ((1, 0), (-1, 0)),
+        _ if (22.5..67.5).contains(&angle) || (202.5..247.5).contains(&angle) => ((1, -1), (-1, 1)),
+        _ if (67.5..112.5).contains(&angle) || (247.5..292.5).contains(&angle) => ((0, -1), (0, 1)),
+        _ if (112.5..157.5).contains(&angle) || (292.5..337.5).contains(&angle) => ((-1, -1), (1, 1)),
+        _ => ((0, 0), (0, 0)), // case shouldn't ever be reached
+    }
+}
+
+pub fn lower_bound_cutoff_supression(img: &DynamicImage) -> DynamicImage {
+    let mut new_img = img.clone();
+    let gradient = intensity_gradient(img);
+
+    for x in 0..img.width() {
+        for y in 0..img.height() {
+            let (offset1, offset2) = pixel_dir_offsets(gradient[x as usize][y as usize].1);
+            let (x1, y1) = (x as i32 + offset1.0, y as i32 + offset1.1);
+            let (x2, y2) = (x as i32 + offset2.0, y as i32 + offset2.1);
+            let curr_mag = gradient[x as usize][y as usize].0;
+            if curr_mag < gradient[x1 as usize][y1 as usize].0 || curr_mag < gradient[x2 as usize][y2 as usize].0 {
+                new_img.put_pixel(x, y, image::Rgba([0, 0, 0, 255])); // suppress if weak
+            }
+        }
+    }
+
+    new_img
+}
 
 enum GaussianFilter {
     K3x3([f64; 9]),
@@ -97,8 +138,8 @@ pub fn apply_kernel<const S: usize>(
 
             for i in 0..size {
                 for j in 0..size {
-                    let new_x = ((x as i32 + i - 2).max(0).min(img.width() as i32 - 1)) as u32;
-                    let new_y = ((y as i32 + j - 2).max(0).min(img.height() as i32 - 1)) as u32;
+                    let new_x = (x as i32 + i - 2).max(0).min(img.width() as i32 - 1) as u32;
+                    let new_y = (y as i32 + j - 2).max(0).min(img.height() as i32 - 1) as u32;
 
                     let pixel = img.get_pixel(new_x, new_y);
                     let kernel_val = kernel[(i * size + j) as usize];
@@ -108,7 +149,6 @@ pub fn apply_kernel<const S: usize>(
                     b += pixel[2] as f64 * kernel_val;
                 }
             }
-
             new_img.put_pixel(x, y, image::Rgba([r as u8, g as u8, b as u8, 255]));
         }
     }
