@@ -66,16 +66,12 @@ pub fn sobel_default(img: &DynamicImage) -> DynamicImage {
 
 // calculate intensity gradient of every pixel
 pub fn intensity_gradient(img: &DynamicImage) -> Vec<Vec<(f64, f64)>> {
-    let mut gradient = vec![vec![(0.0, 0.0); img.height() as usize]; img.width() as usize];
-
-    for x in 0..img.width() {
-        for y in 0..img.height() {
-            let magnitude = edge_magnitude(gx_gy(img, x, y));
-            let direction = edge_direction(gx_gy(img, x, y));
-            gradient[x as usize][y as usize] = (magnitude, direction);
-        }
-    }
-    gradient
+    (0..img.width()).map(|x| {
+        (0..img.height()).map(move |y| {
+            let (gx, gy) = gx_gy(img, x, y);
+            (edge_magnitude((gx, gy)), edge_direction((gx, gy)))
+        }).collect::<Vec<(f64, f64)>>()
+    }).collect::<Vec<Vec<(f64, f64)>>>()
 }
 
 // return offset for the pixels in the direction of the angle (in direction and opposite direction)
