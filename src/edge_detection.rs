@@ -88,8 +88,7 @@ pub fn pixel_dir_offsets(angle: f64) -> ((i32, i32), (i32, i32)) {
     }
 }
 
-pub fn lower_bound_cutoff_suppression(img: &DynamicImage) -> DynamicImage {
-    let mut new_img = img.clone();
+pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
     let gradient = intensity_gradient(img);
 
     for x in 0..img.width() {
@@ -100,7 +99,7 @@ pub fn lower_bound_cutoff_suppression(img: &DynamicImage) -> DynamicImage {
             let (x2, y2) = (x + offset2.0 as usize, y + offset2.1 as usize);
             let curr_mag = gradient[x][y].0;
             if curr_mag < gradient[x1][y1].0 || curr_mag < gradient[x2][y2].0 {
-                new_img.put_pixel(x as u32, y as u32, image::Rgba([0, 0, 0, 255])); // suppress if weak
+                img.put_pixel(x as u32, y as u32, image::Rgba([0, 0, 0, 255])); // suppress if weak
             }
         }
     }
