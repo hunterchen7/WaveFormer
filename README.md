@@ -3,7 +3,7 @@ Converts lines from an image into parametric equations using Fourier transforms.
 Usage: pretty rudimentary at the moment, just change "img" input in main.rs to desired image and run it like a normal rust program. generated equations will appear in images/equations.txt. see generated islands in images/lines.png.
 
 Basic premise of how it works:
-- Step 1: Convert image into edges using an edge detection algorithm currently just uses a basic Sobel filter, will likely implement a Canny edge detector or something similar in the future.
+- Step 1: Convert image into edges using an edge detection algorithm. For now, it just uses a basic Sobel filter modified with a threshold, but I'm currently working on implementing the Canny edge detection algorithm.
 - Step 2: Get lines from images using a DFS that keeps track of the path and explores all 8 neighbouring pixels. 
 - Step 3: Construct equations of all the lines using Fourier transformations, omitting lines containing < n points. (currently n = 16)
   - Computes as follows:
