@@ -78,21 +78,31 @@ pub fn intensity_gradient(img: &DynamicImage) -> Vec<Vec<(f64, f64)>> {
 pub fn pixel_dir_offsets(angle: f64) -> ((i32, i32), (i32, i32)) {
     match angle {
         _ if (-22.5..22.5).contains(&angle) || (157.5..202.5).contains(&angle) => ((1, 0), (-1, 0)), // E/W
-        _ if (22.5..67.5).contains(&angle) || (202.5..247.5).contains(&angle) => ((1, -1), (-1, 1)), //
-        _ if (67.5..112.5).contains(&angle) || (247.5..292.5).contains(&angle) => ((0, -1), (0, 1)),
-        _ => ((-1, -1), (1, 1)), // (112.5..157.5).contains(&angle) || (292.5..337.5).contains(&angle)
+        _ if (22.5..67.5).contains(&angle) || (202.5..247.5).contains(&angle) => ((1, -1), (-1, 1)), // NE/SW
+        _ if (67.5..112.5).contains(&angle) || (247.5..292.5).contains(&angle) => ((0, -1), (0, 1)), // N/S
+        _ if (112.5..157.5).contains(&angle) || (292.5..337.5).contains(&angle) => ((-1, -1), (1, 1)), // NW/SE
+        _ => unreachable!()
     }
 }
 
 pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
     let gradient = intensity_gradient(img);
 
-    for x in 0..img.width() {
-        for y in 0..img.height() {
+    for x in 0..img.width() as i32 {
+        for y in 0..img.height() as i32 {
+            let (offset_x, offset_y) = pixel_dir_offsets(gradient[x as usize][y as usize].1);
+            let (x1, y1) = (x + offset_x.0, y + offset_x.1);
+            let (x2, y2) = (x + offset_y.0, y + offset_y.1);
+            
+            if x1 < 0 || x1 >= img.width() as i32 || y1 < 0 || y1 >= img.height() as i32 ||
+                x2 < 0 || x2 >= img.width() as i32 || y2 < 0 || y2 >= img.height() as i32 {
+                 continue;
+            } // bound check
+            
             let (x, y) = (x as usize, y as usize);
-            let (offset1, offset2) = pixel_dir_offsets(gradient[x][y].1);
-            let (x1, y1) = (x + offset1.0 as usize, y + offset1.1 as usize);
-            let (x2, y2) = (x + offset2.0 as usize, y + offset2.1 as usize);
+            let (x1, y1) = (x1 as usize, y1 as usize);
+            let (x2, y2) = (x2 as usize, y2 as usize);
+            
             let curr_mag = gradient[x][y].0;
             if curr_mag < gradient[x1][y1].0 || curr_mag < gradient[x2][y2].0 {
                 img.put_pixel(x as u32, y as u32, image::Rgba([0, 0, 0, 255])); // suppress if weak
@@ -105,7 +115,7 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
 pub fn double_threshold(img: &DynamicImage, (low, high): (i32, i32)) -> DynamicImage {
     let mut new_img = img.clone();
 
-    
+
 
     new_img
 }
@@ -115,12 +125,12 @@ pub fn canny(img: &DynamicImage, low_threshold: f32, high_threshold: f32) -> Dyn
     let mut new_img = img.clone();
 
     new_img = gaussian_blur_5x5(&new_img);
+    println!("Gaussian blur done");
 
     let gradient = intensity_gradient(&new_img);
     let sobel_img = sobel(&new_img);
-    
-    lower_bound_cutoff_suppression(&mut new_img);   
-    
+
+    lower_bound_cutoff_suppression(&mut new_img);
 
     new_img
 }
@@ -175,6 +185,7 @@ pub fn apply_kernel<const S: usize>(
 // Scientific Figure on ResearchGate. Available from:
 // https://www.researchgate.net/figure/Discrete-approximation-of-the-Gaussian-kernels-3x3-5x5-7x7_fig2_325768087
 // [accessed 31 Jan, 2024]
+// uses 1D array for 2D kernel, probably shouldn't have performance impact but what is written, is written
 const GAUSSIAN_3X3: [f64; 9] = [
     1.0 / 16.0,
     2.0 / 16.0,
