@@ -54,21 +54,19 @@ fn first_white_from(img: &DynamicImage, start: (u32, u32)) -> Option<(u32, u32)>
     first_col_from(img, WHITE, start)
 }
 
-fn oob(x: i32, y: i32, img: &DynamicImage) -> bool {
-    x < 0 || y < 0 || x as u32 >= img.width() || y as u32 >= img.height()
-}
-
 fn dfs(
     x: i32,
     y: i32,
-    visited: &mut [bool],
-    img: &DynamicImage,
+    visited: &mut Vec<Vec<bool>>,
+    img: &mut Vec<Vec<bool>>,
     path: &mut Vec<(i32, i32)>,
-    col: image::Rgba<u8>,
 ) {
-    if oob(x, y, img)
-        || img.get_pixel(x as u32, y as u32) != col
-        || visited[(y * img.width() as i32 + x) as usize]
+    if x < 0
+        || y < 0
+        || x >= img.len() as i32
+        || y >= img[0].len() as i32
+        || visited[y as usize][x as usize]
+        || !img[y as usize][x as usize]
     {
         // if out of bounds or already visited or not white
         return;
@@ -76,7 +74,7 @@ fn dfs(
     // TODO: add path of (x, y) -> path[-1] to path, otherwise there are disconnected lines which means weird equations
     path.push((x, y));
     // path.push((x, y)); // add to path
-    visited[(y * img.width() as i32 + x) as usize] = true; // set visited
+    visited[y as usize][x as usize] = true; // set visited
     for (i, j) in [
         (-1, -1),
         (0, -1),
@@ -88,7 +86,7 @@ fn dfs(
         (1, 1),
     ] {
         // loop through surrounding 3x3
-        dfs(x + i, y + j, visited, img, path, col);
+        dfs(x + i, y + j, visited, img, path);
     }
 }
 
@@ -119,17 +117,30 @@ fn remove_start_palindrome(path: &mut Vec<(i32, i32)>) {
     }
 }
 
+fn img_to_bool(img: &DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<bool>> {
+    let mut bool_img = vec![];
+    for y in 0..img.height() {
+        let mut row = vec![];
+        for x in 0..img.width() {
+            row.push(img.get_pixel(x, y) == col);
+        }
+        bool_img.push(row);
+    }
+    bool_img
+}
+
 pub fn edges_to_lines(img: &mut DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<(i32, i32)>> {
     let mut lines = vec![];
     let dims = img.dimensions();
-    let mut visited = vec![false; (dims.0 * dims.1) as usize];
+    let mut visited = vec![vec![false; dims.0 as usize]; dims.1 as usize];
+    let mut img = img_to_bool(img, col);
 
     for x in 0..dims.0 {
         for y in 0..dims.1 {
-            if !visited[(y * dims.0 + x) as usize] && img.get_pixel(x, y) == col {
+            if !visited[y as usize][x as usize] && img[y as usize][x as usize] {
                 let mut path = vec![];
-                dfs(x as i32, y as i32, &mut visited, img, &mut path, col);
-                // somehow neither of these seem to do anything but they work in tests
+                dfs(x as i32, y as i32, &mut visited, &mut img, &mut path);
+                // somehow neither of these seem to do anything, but they work in tests
                 // the idea is that if dfs backtracks to a point that is already in the path
                 // from the end of the path, then it can be partially truncated
                 remove_start_palindrome(&mut path);
