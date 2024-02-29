@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImage, GenericImageView};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Luma};
 use num::integer::Roots;
 
 type SobelPoint = (i32, i32);
@@ -99,10 +99,31 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
             }
         }
     }
+    // new_img
+}
+
+pub fn double_threshold(img: &DynamicImage, (low, high): (i32, i32)) -> DynamicImage {
+    let mut new_img = img.clone();
+
+    
+
     new_img
 }
 
+pub fn canny(img: &DynamicImage, low_threshold: f32, high_threshold: f32) -> DynamicImage {
+    assert!(low_threshold < high_threshold);
+    let mut new_img = img.clone();
 
+    new_img = gaussian_blur_5x5(&new_img);
+
+    let gradient = intensity_gradient(&new_img);
+    let sobel_img = sobel(&new_img);
+    
+    lower_bound_cutoff_suppression(&mut new_img);   
+    
+
+    new_img
+}
 
 enum GaussianFilter {
     K3x3([f64; 9]),

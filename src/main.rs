@@ -13,7 +13,7 @@ fn main() -> std::io::Result<()> {
             let mut img = img_to_line::get_image("images/big_apple.jpg");
 
             let now = Instant::now();
-            let blurred = edge_detection::gaussian_blur_7x7(&img);
+            let blurred = edge_detection::gaussian_blur_5x5(&img);
             blurred.save("generated/blurred.png").unwrap();
             println!("Gaussian blur new: {:?}", now.elapsed());
 
