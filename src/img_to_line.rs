@@ -57,24 +57,25 @@ fn first_white_from(img: &DynamicImage, start: (u32, u32)) -> Option<(u32, u32)>
 fn dfs(
     x: i32,
     y: i32,
-    visited: &mut Vec<Vec<bool>>,
+    // visited: &mut Vec<Vec<bool>>,
     img: &mut Vec<Vec<bool>>,
     path: &mut Vec<(i32, i32)>,
 ) {
     if x < 0
         || y < 0
-        || x >= img.len() as i32
-        || y >= img[0].len() as i32
-        || visited[y as usize][x as usize]
+        || x >= img[0].len() as i32
+        || y >= img.len() as i32
+        // || visited[y as usize][x as usize]
         || !img[y as usize][x as usize]
     {
-        // if out of bounds or already visited or not white
+        // if out of bounds or already visited or not color match
         return;
     }
     // TODO: add path of (x, y) -> path[-1] to path, otherwise there are disconnected lines which means weird equations
     path.push((x, y));
     // path.push((x, y)); // add to path
-    visited[y as usize][x as usize] = true; // set visited
+    // visited[y as usize][x as usize] = true; // set visited
+    img[y as usize][x as usize] = false; // set visited
     for (i, j) in [
         (-1, -1),
         (0, -1),
@@ -86,7 +87,7 @@ fn dfs(
         (1, 1),
     ] {
         // loop through surrounding 3x3
-        dfs(x + i, y + j, visited, img, path);
+        dfs(x + i, y + j, img, path);
     }
 }
 
@@ -102,6 +103,7 @@ fn is_palindrome(s: usize, e: usize, path: &[(i32, i32)]) -> bool {
     true
 }
 
+// some attempts at path shortening by removing end/beginning palindromic paths
 fn remove_end_palindrome(path: &mut Vec<(i32, i32)>) {
     let longest_palindrome = (0..path.len()).rev().find(|&i| is_palindrome(0, i, path));
     if let Some(i) = longest_palindrome {
@@ -117,6 +119,9 @@ fn remove_start_palindrome(path: &mut Vec<(i32, i32)>) {
     }
 }
 
+// takes in an image and returns a 2D vec of bools, true if pixel is color
+// purpose is to reduce memory usage, since img contains 4 u8 per pixel
+// compiler might end up optimizing this away anyway, but I think it's worth a shot
 fn img_to_bool(img: &DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<bool>> {
     let mut bool_img = vec![];
     for y in 0..img.height() {
@@ -129,22 +134,22 @@ fn img_to_bool(img: &DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<bool>> {
     bool_img
 }
 
+// takes in an image and returns a 2D vec of points, each inner vec represents a line/path
 pub fn edges_to_lines(img: &mut DynamicImage, col: image::Rgba<u8>) -> Vec<Vec<(i32, i32)>> {
     let mut lines = vec![];
     let dims = img.dimensions();
-    let mut visited = vec![vec![false; dims.0 as usize]; dims.1 as usize];
+    // let mut visited = vec![vec![false; dims.0 as usize]; dims.1 as usize];
     let mut img = img_to_bool(img, col);
 
     for x in 0..dims.0 {
         for y in 0..dims.1 {
-            if !visited[y as usize][x as usize] && img[y as usize][x as usize] {
+            if img[y as usize][x as usize] {
                 let mut path = vec![];
-                dfs(x as i32, y as i32, &mut visited, &mut img, &mut path);
-                // somehow neither of these seem to do anything, but they work in tests
-                // the idea is that if dfs backtracks to a point that is already in the path
-                // from the end of the path, then it can be partially truncated
-                remove_start_palindrome(&mut path);
-                remove_end_palindrome(&mut path);
+                dfs(x as i32, y as i32, &mut img, &mut path);
+                // the idea with these is that if dfs backtracks to a point that is already in the
+                // path from the end/beginning of the path, then it can be partially truncated
+                // remove_start_palindrome(&mut path);
+                // remove_end_palindrome(&mut path);
                 if path.len() > 16 {
                     lines.push(path);
                 }
@@ -164,6 +169,7 @@ pub fn edges_to_lines_b(img: &mut DynamicImage) -> Vec<Vec<(i32, i32)>> {
     edges_to_lines(img, BLACK)
 }
 
+// generates a random color, used in lines_to_img to visualize generated lines
 fn random_col() -> image::Rgba<u8> {
     let col1 = rand::thread_rng().gen_range(100..255);
     let col2 = rand::thread_rng().gen_range(100..255);
@@ -171,14 +177,17 @@ fn random_col() -> image::Rgba<u8> {
     image::Rgba([col1, col2, col3, 255])
 }
 
-pub fn line_to_img(img: &mut DynamicImage, line: &[(i32, i32)], col: image::Rgba<u8>) {
+// takes in a mutable image and a line, and colors the pixels in the line
+// used in lines_to_img
+fn line_to_img(img: &mut DynamicImage, line: &[(i32, i32)], col: image::Rgba<u8>) {
     for point in line.iter() {
         img.put_pixel(point.0 as u32, point.1 as u32, col);
     }
-} // fn line_to_img()
+}
 
+// takes in a 2D vec of points where the inner vectors represent lines
 pub fn lines_to_img(lines: &[Vec<(i32, i32)>]) {
-    let (mut max_x, mut max_y) = (0, 0);
+    let (mut max_x, mut max_y) = (0, 0); // find max x and y to set image dimensions
     for line in lines.iter() {
         for point in line.iter() {
             if point.0 > max_x {
@@ -189,6 +198,8 @@ pub fn lines_to_img(lines: &[Vec<(i32, i32)>]) {
             }
         }
     }
+    // + 50 for a bit of padding, might need a better system for this
+    // TODO?
     let mut img = DynamicImage::new_rgb8(max_x as u32 + 50, max_y as u32 + 50);
     for line in lines.iter() {
         let col = random_col();
