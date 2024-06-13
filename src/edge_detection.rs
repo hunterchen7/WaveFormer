@@ -111,12 +111,12 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
     }
 }
 
-pub fn double_threshold(img: &mut DynamicImage, (low, high): (i32, i32)) {
+pub fn double_threshold(img: &mut DynamicImage, (low, high): (u8, u8)) {
     let (width, height) = img.dimensions();
 
     (0..width).for_each(|x| {
         (0..height).for_each(|y| {
-            let intensity = img.get_pixel(x, y)[0] as i32;
+            let intensity = img.get_pixel(x, y)[0];
             let new_pixel = if intensity >= high { // strong edge
                 image::Rgba([255, 255, 255, 255])
             } else if intensity > low { // weak edge
@@ -129,7 +129,11 @@ pub fn double_threshold(img: &mut DynamicImage, (low, high): (i32, i32)) {
     });
 }
 
-pub fn canny(img: &DynamicImage, low_threshold: i32, high_threshold: i32) -> DynamicImage {
+pub fn hysteresis(img: &mut DynamicImage, (low, high): (u8, u8)) {
+    
+}
+
+pub fn canny(img: &DynamicImage, low_threshold: u8, high_threshold: u8) -> DynamicImage {
     assert!(low_threshold < high_threshold);
     let mut new_img = img.clone();
 
@@ -148,7 +152,7 @@ pub fn canny(img: &DynamicImage, low_threshold: i32, high_threshold: i32) -> Dyn
     double_threshold(&mut new_img, (low_threshold, high_threshold));
 
     // 5. Edge tracking by hysteresis
-    
+    hysteresis(&mut new_img, (low_threshold, high_threshold));
 
     new_img
 }
