@@ -4,6 +4,7 @@ mod img_to_line;
 use std::thread;
 use std::time::Instant;
 use std::{fs::File, io::Write};
+use crate::edge_detection::sobel;
 
 fn main() -> std::io::Result<()> {
     let builder = thread::Builder::new().stack_size(32 * 1024 * 1024);
@@ -26,9 +27,10 @@ fn main() -> std::io::Result<()> {
             blurred_edges.save("generated/blurred_edges.png").unwrap();
 
             let now = Instant::now();
-            let mut lines = img_to_line::edges_to_lines_w(&mut edges);
+            let mut lines = img_to_line::edges_to_lines_b(&mut sobel(&img));
+
             lines.sort_by_key(|b| std::cmp::Reverse(b.len())); // sort by length
-            lines.truncate(32); // only take n longest lines
+            lines.truncate(32); // only take the n longest lines
             println!("Edges to lines: {:?}", now.elapsed());
 
             let mut file = File::create("generated/equations.txt").unwrap();

@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Luma};
+use image::{DynamicImage, GenericImage, GenericImageView};
 use num::integer::Roots;
 
 type SobelPoint = (i32, i32);
@@ -112,25 +112,44 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
     // new_img
 }
 
-pub fn double_threshold(img: &DynamicImage, (low, high): (i32, i32)) -> DynamicImage {
-    let mut new_img = img.clone();
+pub fn double_threshold(img: &mut DynamicImage, (low, high): (i32, i32)) {
+    let (width, height) = img.dimensions();
 
-
-
-    new_img
+    (0..width).for_each(|x| {
+        (0..height).for_each(|y| {
+            let intensity = img.get_pixel(x, y)[0] as i32;
+            let new_pixel = if intensity >= high { // strong edge
+                image::Rgba([255, 255, 255, 255])
+            } else if intensity > low { // weak edge
+                image::Rgba([128, 128, 128, 255])
+            } else { // suppressed
+                image::Rgba([0, 0, 0, 255])
+            };
+            img.put_pixel(x, y, new_pixel);
+        });
+    });
 }
 
-pub fn canny(img: &DynamicImage, low_threshold: f32, high_threshold: f32) -> DynamicImage {
+pub fn canny(img: &DynamicImage, low_threshold: i32, high_threshold: i32) -> DynamicImage {
     assert!(low_threshold < high_threshold);
     let mut new_img = img.clone();
 
+    // 1. Gaussian blur
     new_img = gaussian_blur_5x5(&new_img);
     println!("Gaussian blur done");
 
+    // 2. Find intensity gradients
     let gradient = intensity_gradient(&new_img);
     let sobel_img = sobel(&new_img);
 
+    // 3. Perform lower bound cutoff suppression
     lower_bound_cutoff_suppression(&mut new_img);
+
+    // 4. Double thresholding
+    double_threshold(&mut new_img, (low_threshold, high_threshold));
+
+    // 5. Edge tracking by hysteresis
+    
 
     new_img
 }
