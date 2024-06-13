@@ -109,7 +109,6 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
             }
         }
     }
-    // new_img
 }
 
 pub fn double_threshold(img: &mut DynamicImage, (low, high): (i32, i32)) {
@@ -310,4 +309,86 @@ pub fn gaussian_blur_5x5(img: &DynamicImage) -> DynamicImage {
 #[allow(dead_code)]
 pub fn gaussian_blur_7x7(img: &DynamicImage) -> DynamicImage {
     gaussian_blur(img, GaussianFilter::K7x7(GAUSSIAN_7X7))
+}
+
+// Unit tests
+#[cfg(test)]
+mod tests {
+    use std::f64::consts::PI;
+    use super::*;
+
+    #[test]
+    fn test_gx_gy() {
+        let mut img = DynamicImage::new_luma8(3, 3);
+        for x in 0..3 {
+            for y in 0..3 {
+                img.put_pixel(x, y, image::Rgba([x as u8 * y as u8, 0, 0, 0]));
+            }
+        }
+
+        let (gx, gy) = gx_gy(&img, 1, 1);
+        assert_eq!(gx, 0);
+        assert_eq!(gy, 0);
+    }
+
+    #[test]
+    fn test_edge_direction() {
+        let direction = edge_direction((1, 1));
+        assert!((direction - 45.0_f64.to_radians()).abs() < 1e-10);
+
+        let direction = edge_direction((0, 1));
+        assert!((direction - 90.0_f64.to_radians()).abs() < 1e-10);
+
+        let direction = edge_direction((1, 0));
+        assert!((direction - 0.0_f64.to_radians()).abs() < 1e-10);
+
+        let direction = edge_direction((-1, -1));
+        assert!((direction - (-135.0_f64.to_radians())).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_edge_magnitude() {
+        let magnitude = edge_magnitude((3, 4));
+        assert!((magnitude - 5.0).abs() < 1e-10);
+
+        let magnitude = edge_magnitude((0, 0));
+        assert!((magnitude - 0.0).abs() < 1e-10);
+
+        let magnitude = edge_magnitude((5, 12));
+        assert!((magnitude - 13.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_intensity_gradient() {
+        let mut img = DynamicImage::new_luma8(3, 3);
+        for x in 0..3 {
+            for y in 0..3 {
+                img.put_pixel(x, y, image::Rgba([x as u8 * y as u8, 0, 0, 0]));
+            }
+        }
+
+        let gradient = intensity_gradient(&img);
+        assert_eq!(gradient.len(), 3);
+        assert_eq!(gradient[0].len(), 3);
+
+        for x in 0..3 {
+            for y in 0..3 {
+                let (magnitude, direction) = gradient[x as usize][y as usize];
+                assert!(magnitude >= 0.0);
+                assert!((-PI..=PI).contains(&direction));
+            }
+        }
+    }
+
+    #[test]
+    fn test_pixel_dir_offsets() {
+        assert_eq!(pixel_dir_offsets(0.0), ((1, 0), (-1, 0)));
+        assert_eq!(pixel_dir_offsets(45.0), ((1, -1), (-1, 1)));
+        assert_eq!(pixel_dir_offsets(90.0), ((0, -1), (0, 1)));
+        assert_eq!(pixel_dir_offsets(135.0), ((-1, -1), (1, 1)));
+        assert_eq!(pixel_dir_offsets(180.0), ((1, 0), (-1, 0)));
+        assert_eq!(pixel_dir_offsets(225.0), ((1, -1), (-1, 1)));
+        assert_eq!(pixel_dir_offsets(270.0), ((0, -1), (0, 1)));
+        assert_eq!(pixel_dir_offsets(315.0), ((-1, -1), (1, 1)));
+    }
 }
