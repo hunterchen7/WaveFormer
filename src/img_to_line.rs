@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_remove_end_palindrome3() {
-        let mut path2 = vec![
+        let mut path3 = vec![
             (0, 0),
             (1, 1),
             (0, 1),
@@ -243,9 +243,9 @@ mod tests {
             (1, 1),
             (0, 0),
         ];
-        remove_end_palindrome(path2.as_mut());
+        remove_end_palindrome(path3.as_mut());
         assert_eq!(
-            path2,
+            path3,
             vec![
                 (0, 0),
                 (1, 1),

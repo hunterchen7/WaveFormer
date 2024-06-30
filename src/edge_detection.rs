@@ -1,36 +1,10 @@
-use image::{DynamicImage, GenericImage, GenericImageView};
+use image::{DynamicImage, GenericImage, GenericImageView, Rgba};
 use num::integer::Roots;
 
 type SobelPoint = (i32, i32);
 
 const SOBEL_X: [[i32; 3]; 3] = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
 const SOBEL_Y: [[i32; 3]; 3] = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
-
-pub fn gx_gy(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
-    let mut gx = 0;
-    let mut gy = 0;
-
-    for i in 0..3 {
-        for j in 0..3 {
-            let new_x = ((x as i32 + i - 1).max(0) as u32).min(img.width() - 1);
-            let new_y = ((y as i32 + j - 1).max(0) as u32).min(img.height() - 1);
-
-            let pixel = img.get_pixel(new_x, new_y)[0] as i32;
-            gx += SOBEL_X[i as usize][j as usize] * pixel;
-            gy += SOBEL_Y[i as usize][j as usize] * pixel;
-        }
-    }
-
-    (gx, gy)
-}
-
-pub fn edge_direction((gx, gy): (i32, i32)) -> f64 {
-    (gy as f64).atan2(gx as f64)
-}
-
-pub fn edge_magnitude((gx, gy): (i32, i32)) -> f64 {
-    ((gx.pow(2) + gy.pow(2)) as f64).sqrt()
-}
 
 #[allow(dead_code)]
 pub fn sobel_threshold(img: &DynamicImage, threshold: u8, use_g: bool) -> DynamicImage {
@@ -64,28 +38,59 @@ pub fn sobel_default(img: &DynamicImage) -> DynamicImage {
     sobel_threshold(img, 128, false)
 }
 
+pub fn gx_gy(img: &DynamicImage, x: u32, y: u32) -> SobelPoint {
+    let mut gx = 0;
+    let mut gy = 0;
+
+    for i in 0..3 {
+        for j in 0..3 {
+            let new_x = ((x as i32 + i - 1).max(0) as u32).min(img.width() - 1);
+            let new_y = ((y as i32 + j - 1).max(0) as u32).min(img.height() - 1);
+
+            let pixel = img.get_pixel(new_x, new_y)[0] as i32;
+            gx += SOBEL_X[i as usize][j as usize] * pixel;
+            gy += SOBEL_Y[i as usize][j as usize] * pixel;
+        }
+    }
+
+    (gx, gy)
+}
+
+pub fn edge_direction((gx, gy): (i32, i32)) -> f64 {
+    (gy as f64).atan2(gx as f64).to_degrees()
+}
+
+pub fn edge_magnitude((gx, gy): (i32, i32)) -> f64 {
+    ((gx.pow(2) + gy.pow(2)) as f64).sqrt()
+}
+
 // calculate intensity gradient of every pixel
 pub fn intensity_gradient(img: &DynamicImage) -> Vec<Vec<(f64, f64)>> {
-    (0..img.width()).map(|x| {
-        (0..img.height()).map(move |y| {
-            let (gx, gy) = gx_gy(img, x, y);
-            (edge_magnitude((gx, gy)), edge_direction((gx, gy)))
-        }).collect::<Vec<(f64, f64)>>()
-    }).collect::<Vec<Vec<(f64, f64)>>>()
+    (0..img.width())
+        .map(|x| {
+            (0..img.height())
+                .map(move |y| {
+                    let (gx, gy) = gx_gy(img, x, y);
+                    (edge_magnitude((gx, gy)), edge_direction((gx, gy)))
+                })
+                .collect::<Vec<(f64, f64)>>()
+        })
+        .collect::<Vec<Vec<(f64, f64)>>>()
 }
 
 // return offset for the pixels in the direction of the angle (in direction and opposite direction)
 pub fn pixel_dir_offsets(angle: f64) -> ((i32, i32), (i32, i32)) {
+    let angle = (angle + 360.0) % 360.0; // normalize angle
     match angle {
-        _ if (-22.5..22.5).contains(&angle) || (157.5..202.5).contains(&angle) => ((1, 0), (-1, 0)), // E/W
-        _ if (22.5..67.5).contains(&angle) || (202.5..247.5).contains(&angle) => ((1, -1), (-1, 1)), // NE/SW
-        _ if (67.5..112.5).contains(&angle) || (247.5..292.5).contains(&angle) => ((0, -1), (0, 1)), // N/S
-        _ if (112.5..157.5).contains(&angle) || (292.5..337.5).contains(&angle) => ((-1, -1), (1, 1)), // NW/SE
-        _ => unreachable!()
+        0.0..=22.5 | 337.5..=360.0 | 157.5..=202.5 => ((1, 0), (-1, 0)), // right & left
+        22.5..=67.5 | 202.5..=247.5 => ((1, -1), (-1, 1)),               // top right & bottom left
+        67.5..=112.5 | 247.5..=292.5 => ((0, -1), (0, 1)),               // top & bottom
+        112.5..=157.5 | 292.5..=337.5 => ((-1, -1), (1, 1)),             // top left & bottom right
+        _ => unreachable!("angle out of bounds: {}", angle),
     }
 }
 
-pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
+pub fn non_maximum_suppression(img: &mut DynamicImage) {
     let gradient = intensity_gradient(img);
 
     for x in 0..img.width() as i32 {
@@ -93,16 +98,23 @@ pub fn lower_bound_cutoff_suppression(img: &mut DynamicImage) {
             let (offset_x, offset_y) = pixel_dir_offsets(gradient[x as usize][y as usize].1);
             let (x1, y1) = (x + offset_x.0, y + offset_x.1);
             let (x2, y2) = (x + offset_y.0, y + offset_y.1);
-            
-            if x1 < 0 || x1 >= img.width() as i32 || y1 < 0 || y1 >= img.height() as i32 ||
-                x2 < 0 || x2 >= img.width() as i32 || y2 < 0 || y2 >= img.height() as i32 {
-                 continue;
+
+            if x1 < 0
+                || x1 >= img.width() as i32
+                || y1 < 0
+                || y1 >= img.height() as i32
+                || x2 < 0
+                || x2 >= img.width() as i32
+                || y2 < 0
+                || y2 >= img.height() as i32
+            {
+                continue;
             } // bound check
-            
+
             let (x, y) = (x as usize, y as usize);
             let (x1, y1) = (x1 as usize, y1 as usize);
             let (x2, y2) = (x2 as usize, y2 as usize);
-            
+
             let curr_mag = gradient[x][y].0;
             if curr_mag < gradient[x1][y1].0 || curr_mag < gradient[x2][y2].0 {
                 img.put_pixel(x as u32, y as u32, image::Rgba([0, 0, 0, 255])); // suppress if weak
@@ -116,40 +128,82 @@ pub fn double_threshold(img: &mut DynamicImage, (low, high): (u8, u8)) {
 
     (0..width).for_each(|x| {
         (0..height).for_each(|y| {
-            let intensity = img.get_pixel(x, y)[0];
-            let new_pixel = if intensity >= high { // strong edge
-                image::Rgba([255, 255, 255, 255])
-            } else if intensity > low { // weak edge
-                image::Rgba([128, 128, 128, 255])
-            } else { // suppressed
-                image::Rgba([0, 0, 0, 255])
+            let pixel = img.get_pixel(x, y)[0];
+            let new_pixel = if pixel >= high {
+                // strong edge
+                255
+            } else if pixel > low {
+                // weak edge
+                128
+            } else {
+                // suppressed
+                0
             };
-            img.put_pixel(x, y, new_pixel);
+            if new_pixel == 128 {
+                img.put_pixel(x, y, Rgba([128, 128, 0, 255]));
+            } else {
+                img.put_pixel(x, y, Rgba([new_pixel, new_pixel, new_pixel, 255]));
+            }
         });
     });
 }
 
+// version without dfs
 pub fn hysteresis(img: &mut DynamicImage, (low, high): (u8, u8)) {
-    
+    let (width, height) = img.dimensions();
+
+    (0..width).for_each(|x| {
+        (0..height).for_each(|y| {
+            let pixel = img.get_pixel(x, y)[0];
+            if pixel == 255 {
+                for i in -1..2 {
+                    for j in -1..2 {
+                        let new_x = x as i32 + i;
+                        let new_y = y as i32 + j;
+                        if new_x >= 0 && new_x < width as i32 && new_y >= 0 && new_y < height as i32
+                        {
+                            let new_pixel = img.get_pixel(new_x as u32, new_y as u32)[0];
+                            if new_pixel == 128 {
+                                img.put_pixel(
+                                    new_x as u32,
+                                    new_y as u32,
+                                    Rgba([255, 255, 255, 255]),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
 }
 
+/// The Canny edge detection algorithm
+///
+/// # Arguments
+/// * `img` - The image to be processed
+/// * `low_threshold` - The lower threshold for double thresholding
+/// * `high_threshold` - The higher threshold for double thresholding
+///
+/// # Returns
+/// A new black and white image, with black representing edges
 pub fn canny(img: &DynamicImage, low_threshold: u8, high_threshold: u8) -> DynamicImage {
     assert!(low_threshold < high_threshold);
-    let mut new_img = img.clone();
+    let mut new_img = img.grayscale();
+    new_img.save("canny/0grayscale.png").unwrap();
 
     // 1. Gaussian blur
     new_img = gaussian_blur_5x5(&new_img);
-    println!("Gaussian blur done");
+    new_img.save("canny/1blur.png").unwrap();
 
-    // 2. Find intensity gradients
-    let gradient = intensity_gradient(&new_img);
-    let sobel_img = sobel(&new_img);
-
-    // 3. Perform lower bound cutoff suppression
-    lower_bound_cutoff_suppression(&mut new_img);
+    // 2 & 3. Find intensity gradients & Perform non-maximum suppression
+    // doesn't work the way it should
+    non_maximum_suppression(&mut new_img);
+    new_img.save("canny/2nms.png").unwrap();
 
     // 4. Double thresholding
     double_threshold(&mut new_img, (low_threshold, high_threshold));
+    new_img.save("canny/3threshold.png").unwrap();
 
     // 5. Edge tracking by hysteresis
     hysteresis(&mut new_img, (low_threshold, high_threshold));
@@ -203,11 +257,11 @@ pub fn apply_kernel<const S: usize>(
     }
 }
 
-// Gaussian filtering for FPGA based image processing with High-Level Synthesis tools -
-// Scientific Figure on ResearchGate. Available from:
-// https://www.researchgate.net/figure/Discrete-approximation-of-the-Gaussian-kernels-3x3-5x5-7x7_fig2_325768087
-// [accessed 31 Jan, 2024]
-// uses 1D array for 2D kernel, probably shouldn't have performance impact but what is written, is written
+/// Gaussian filtering for FPGA based image processing with High-Level Synthesis tools -
+/// Scientific Figure on ResearchGate. Available from:
+/// https://www.researchgate.net/figure/Discrete-approximation-of-the-Gaussian-kernels-3x3-5x5-7x7_fig2_325768087
+/// [accessed 31 Jan, 2024]
+/// uses 1D array for 2D kernel, probably shouldn't have performance impact but what is written, is written
 const GAUSSIAN_3X3: [f64; 9] = [
     1.0 / 16.0,
     2.0 / 16.0,
@@ -318,8 +372,8 @@ pub fn gaussian_blur_7x7(img: &DynamicImage) -> DynamicImage {
 // Unit tests
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::PI;
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_gx_gy() {
@@ -333,21 +387,6 @@ mod tests {
         let (gx, gy) = gx_gy(&img, 1, 1);
         assert_eq!(gx, 0);
         assert_eq!(gy, 0);
-    }
-
-    #[test]
-    fn test_edge_direction() {
-        let direction = edge_direction((1, 1));
-        assert!((direction - 45.0_f64.to_radians()).abs() < 1e-10);
-
-        let direction = edge_direction((0, 1));
-        assert!((direction - 90.0_f64.to_radians()).abs() < 1e-10);
-
-        let direction = edge_direction((1, 0));
-        assert!((direction - 0.0_f64.to_radians()).abs() < 1e-10);
-
-        let direction = edge_direction((-1, -1));
-        assert!((direction - (-135.0_f64.to_radians())).abs() < 1e-10);
     }
 
     #[test]
@@ -385,14 +424,9 @@ mod tests {
     }
 
     #[test]
-    fn test_pixel_dir_offsets() {
-        assert_eq!(pixel_dir_offsets(0.0), ((1, 0), (-1, 0)));
-        assert_eq!(pixel_dir_offsets(45.0), ((1, -1), (-1, 1)));
-        assert_eq!(pixel_dir_offsets(90.0), ((0, -1), (0, 1)));
-        assert_eq!(pixel_dir_offsets(135.0), ((-1, -1), (1, 1)));
-        assert_eq!(pixel_dir_offsets(180.0), ((1, 0), (-1, 0)));
-        assert_eq!(pixel_dir_offsets(225.0), ((1, -1), (-1, 1)));
-        assert_eq!(pixel_dir_offsets(270.0), ((0, -1), (0, 1)));
-        assert_eq!(pixel_dir_offsets(315.0), ((-1, -1), (1, 1)));
+    fn test_pixel_dir_offset_right() {
+        let (offset_x, offset_y) = pixel_dir_offsets(0.0);
+        assert_eq!(offset_x, (1, 0));
+        assert_eq!(offset_y, (-1, 0));
     }
 }

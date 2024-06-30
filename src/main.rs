@@ -4,14 +4,13 @@ mod img_to_line;
 use std::thread;
 use std::time::Instant;
 use std::{fs::File, io::Write};
-use crate::edge_detection::sobel;
 
 fn main() -> std::io::Result<()> {
     let builder = thread::Builder::new().stack_size(32 * 1024 * 1024);
 
     let handler = builder
         .spawn(|| {
-            let mut img = img_to_line::get_image("images/big_apple.jpg");
+            let img = img_to_line::get_image("images/toronto.png");
 
             let now = Instant::now();
             let blurred = edge_detection::gaussian_blur_5x5(&img);
@@ -19,7 +18,7 @@ fn main() -> std::io::Result<()> {
             println!("Gaussian blur new: {:?}", now.elapsed());
 
             let now = Instant::now();
-            let mut edges = edge_detection::sobel_default(&img);
+            let edges = edge_detection::canny(&img, 255 / 3, 255);
             println!("Sobel: {:?}", now.elapsed());
             edges.save("generated/edges.png").unwrap();
 
@@ -27,7 +26,7 @@ fn main() -> std::io::Result<()> {
             blurred_edges.save("generated/blurred_edges.png").unwrap();
 
             let now = Instant::now();
-            let mut lines = img_to_line::edges_to_lines_b(&mut sobel(&img));
+            let mut lines = img_to_line::edges_to_lines_b(&mut edge_detection::sobel(&img));
 
             lines.sort_by_key(|b| std::cmp::Reverse(b.len())); // sort by length
             lines.truncate(32); // only take the n longest lines
